@@ -90,208 +90,115 @@ static double * restrict out; // used to collect both mueller matrix and integra
 /* the following definitions and data are from Gutkowicz-Krusin D, Draine BT. "Propagation of electromagnetic waves on a
  * rectangular lattice of polarizable points" (2004). Available from: http://arxiv.org/abs/astro-ph/0403082.
  */ 
-struct draine_coefficients {
-	const double ratios[3];
-	const double R0[3]; // polarizability correction by Eq.(45)
-	const double R1;    // polarizability correction by Eq.(47)
-	const double R2[3]; // polarizability correction by Eq.(48)
-	const double R3[6]; // polarizability correction by Eq.(49)
-};
-static const struct draine_coefficients draine_precalc_data_array[] = {
-	// the array is finalized with zeros to facilitate search
-	{
-		{1, 1, 1},
-		{0, 0, 0}, 0,
-		{0, 0, 0},
-		{0, 0, 0, 0, 0, 0}},
-	{
-		{1, 1, 1.5},
-		{0.20426, 0.20426, -0.40851}, -0.53869,
-		{0.52918, 0.52918, -1.59705},
-		{0.37743, 0.37743, -1.62922, 0.13566, 0.01609, 0.01609}},
-	{
-		{1, 1.5, 1},
-		{0.20426, -0.40851, 0.20426}, -0.53869,
-		{0.52918, -1.59705, 0.52918},
-		{0.37743, -1.62922, 0.37743, 0.01609, 0.13566, 0.01609}},
-	{
-		{1.5, 1, 1},
-		{-0.40851, 0.20426, 0.20426}, -0.53869,
-		{-1.59705, 0.52918, 0.52918},
-		{-1.62922, 0.37743, 0.37743, 0.01609, 0.01609, 0.13566}},
-	{
-		{1, 1.5, 1.5},
-		{0.52383, -0.26192, -0.26192}, -0.50962,
-		{1.13457, -0.82209, -0.82209},
-		{0.80161, -0.80815, -0.80815, 0.16648, 0.16648, -0.18041}},
-	{
-		{1.5, 1, 1.5},
-		{-0.26192, 0.52383, -0.26192}, -0.50962,
-		{-0.82209, 1.13457, -0.82209},
-		{-0.80815, 0.80161, -0.80815, 0.16648, -0.18041, 0.16648}},
-	{
-		{1.5, 1.5, 1},
-		{-0.26192, -0.26192, 0.52383}, -0.50962,
-		{-0.82209, -0.82209, 1.13457},
-		{-0.80815, -0.80815, 0.80161, -0.18041, 0.16648, 0.16648}},
-	{
-		{1, 1, 2},
-		{0.38545, 0.38545, -0.77090}, -1.76582,
-		{0.88788, 0.88788, -3.54158},
-		{0.55693, 0.55693, -3.72878, 0.23735, 0.09360, 0.09360}},
-	{
-		{1, 2, 1},
-		{0.38545, -0.77090, 0.38545}, -1.76582,
-		{0.88788, -3.54158, 0.88788},
-		{0.55693, -3.72878, 0.55693, 0.09360, 0.23735, 0.09360}},
-	{
-		{2, 1, 1},
-		{-0.77090, 0.38545, 0.38545}, -1.76582,
-		{-3.54158, 0.88788, 0.88788},
-		{-3.72878, 0.55693, 0.55693, 0.09360, 0.09360, 0.23735}},
-	{
-		{1, 1.5, 2},
-		{0.81199, -0.21028, -0.60172}, -1.21448,
-		{1.55359, -0.50100, -2.26706},
-		{1.02166, -0.55501, -2.30887, 0.27206, 0.25987, -0.21806}},
-	{
-		{1, 2, 1.5},
-		{0.81199, -0.60172, -0.21028}, -1.21448,
-		{1.55359, -2.26706, -0.50100},
-		{1.02166, -2.30887, -0.55501, 0.25987, 0.27206, -0.21806}},
-	{
-		{1.5, 1, 2},
-		{-0.21028, 0.81199, -0.60172}, -1.21448,
-		{-0.50100, 1.55359, -2.26706},
-		{-0.55501, 1.02166, -2.30887, 0.27206, -0.21806, 0.25987}},
-	{
-		{1.5, 2, 1},
-		{-0.21028, -0.60172, 0.81199}, -1.21448,
-		{-0.50100, -2.26706, 1.55359},
-		{-0.55501, -2.30887, 1.02166, -0.21806, 0.27206, 0.25987}},
-	{
-		{2, 1, 1.5},
-		{-0.60172, 0.81199, -0.21028}, -1.21448,
-		{-2.26706, 1.55359, -0.50100},
-		{-2.30887, 1.02166, -0.55501, 0.25987, -0.21806, 0.27206}},
-	{
-		{2, 1.5, 1},
-		{-0.60172, -0.21028, 0.81199}, -1.21448,
-		{-2.26706, -0.50100, 1.55359},
-		{-2.30887, -0.55501, 1.02166, -0.21806, 0.25987, 0.27206}},
-	{
-		{1, 2, 2},
-		{1.19693, -0.59846, -0.59846}, -1.59967,
-		{2.01512, -1.80739, -1.80739},
-		{1.26456, -1.78732, -1.78732, 0.37528, 0.37528, -0.39535}},
-	{
-		{2, 1, 2},
-		{-0.59846, 1.19693, -0.59846}, -1.59967,
-		{-1.80739, 2.01512, -1.80739},
-		{-1.78732, 1.26456, -1.78732, 0.37528, -0.39535, 0.37528}},
-	{
-		{2, 2, 1},
-		{-0.59846, -0.59846, 1.19693}, -1.59967,
-		{-1.80739, -1.80739, 2.01512},
-		{-1.78732, -1.78732, 1.26456, -0.39535, 0.37528, 0.37528}},
-	{
-		{1, 1, 3},
-		{0.74498, 0.74498, -1.48995}, -5.47612,
-		{1.44677, 1.44677, -8.36967},
-		{0.81662, 0.81662, -8.83412, 0.39793, 0.23223, 0.23223}},
-	{
-		{1, 3, 1},
-		{0.74498, -1.48995, 0.74498}, -5.47612,
-		{1.44677, -8.36967, 1.44677},
-		{0.81662, -8.83412, 0.81662, 0.23223, 0.39793, 0.23223}},
-	{
-		{3, 1, 1},
-		{-1.48995, 0.74498, 0.74498}, -5.47612,
-		{-8.36967, 1.44677, 1.44677},
-		{-8.83412, 0.81662, 0.81662, 0.23223, 0.23223, 0.39793}},
-	{
-		{1, 1.5, 3},
-		{1.38481, -0.14304, -1.24176}, -3.71651,
-		{2.20875, -0.12162, -5.80365},
-		{1.34832, -0.40088, -6.06792, 0.43771, 0.42272, -0.15845}},
-	{
-		{1, 3, 1.5},
-		{1.38481, -1.24176, -0.14304}, -3.71651,
-		{2.20875, -5.80365, -0.12162},
-		{1.34832, -6.06792, -0.40088, 0.42272, 0.43771, -0.15845}},
-	{
-		{1.5, 1, 3},
-		{-0.14304, 1.38481, -1.24176}, -3.71651,
-		{-0.12162, 2.20875, -5.80365},
-		{-0.40088, 1.34832, -6.06792, 0.43771, -0.15845, 0.42272}},
-	{
-		{1.5, 3, 1},
-		{-0.14304, -1.24176, 1.38481}, -3.71651,
-		{-0.12162, -5.80365, 2.20875},
-		{-0.40088, -6.06792, 1.34832, -0.15845, 0.43771, 0.42272}},
-	{
-		{3, 1, 1.5},
-		{-1.24176, 1.38481, -0.14304}, -3.71651,
-		{-5.80365, 2.20875, -0.12162},
-		{-6.06792, 1.34832, -0.40088, 0.42272, -0.15845, 0.43771}},
-	{
-		{3, 1.5, 1},
-		{-1.24176, -0.14304, 1.38481}, -3.71651,
-		{-5.80365, -0.12162, 2.20875},
-		{-6.06792, -0.40088, 1.34832, -0.15845, 0.42272, 0.43771}},
-	{
-		{1, 2, 3},
-		{1.96224, -0.69714, -1.26510}, -3.48931,
-		{2.73708, -1.49246, -4.73393},
-		{1.62638, -1.56624, -4.80661, 0.55590, 0.55480, -0.48211}},
-	{
-		{1, 3, 2},
-		{1.96224, -1.26510, -0.69714}, -3.48931,
-		{2.73708, -4.73393, -1.49246},
-		{1.62638, -4.80661, -1.56624, 0.55480, 0.55590, -0.48211}},
-	{
-		{2, 1, 3},
-		{-0.69714, 1.96224, -1.26510}, -3.48931,
-		{-1.49246, 2.73708, -4.73393},
-		{-1.56624, 1.62638, -4.80661, 0.55590, -0.48211, 0.55480}},
-	{
-		{2, 3, 1},
-		{-0.69714, -1.26510, 1.96224}, -3.48931,
-		{-1.49246, -4.73393, 2.73708},
-		{-1.56624, -4.80661, 1.62638, -0.48211, 0.55590, 0.55480}},
-	{
-		{3, 1, 2},
-		{-1.26510, 1.96224, -0.69714}, -3.48931,
-		{-4.73393, 2.73708, -1.49246},
-		{-4.80661, 1.62638, -1.56624, 0.55480, -0.48211, 0.55590}},
-	{
-		{3, 2, 1},
-		{-1.26510, -0.69714, 1.96224}, -3.48931,
-		{-4.73393, -1.49246, 2.73708},
-		{-4.80661, -1.56624, 1.62638, -0.48211, 0.55480, 0.55590}},
-	{
-		{1, 3, 3},
-		{3.11030, -1.55515, -1.55515}, -4.62875,
-		{3.56356, -4.09616, -4.09616},
-		{2.04073, -3.94766, -3.94766, 0.76142, 0.76142, -0.90991}},
-	{
-		{3, 1, 3},
-		{-1.55515, 3.11030, -1.55515}, -4.62875,
-		{-4.09616, 3.56356, -4.09616},
-		{-3.94766, 2.04073, -3.94766, 0.76142, -0.90991, 0.76142}},
-	{
-		{3, 3, 1},
-		{-1.55515, -1.55515, 3.11030}, -4.62875,
-		{-4.09616, -4.09616, 3.56356},
-		{-3.94766, -3.94766, 2.04073, -0.90991, 0.76142, 0.76142}},
-	{
-		{0, 0, 0},
-		{0, 0, 0}, 0,
-		{0, 0, 0},
-		{0, 0, 0, 0, 0, 0}},
-};
+static struct draine_coefficients {
+	double R0[3]; // polarizability correction by Eq.(45)
+	double R1;    // polarizability correction by Eq.(47)
+	double R2[3]; // polarizability correction by Eq.(48)
+	double R3[6]; // polarizability correction by Eq.(49)
+}draine_data;
 
-// EXTERNAL FUNCTIONS
+void R_coeff_rect_lattice(void)
+{
+    double alpha = 1.0e-4;
+    int count = 40;
+    int     i, j, k;
+    double  n[3];
+    double  Q[3];
+    double  norm_n, norm_Q;
+    double  factor_n, factor_Q;
+    double  d = pow(rectScaleX * rectScaleY * rectScaleZ, 0.3333333);
+    double sum_R0_0_Q = 0.0;
+    double sum_R0_0_n = 0.0;
+    double sum_R0_1_Q = 0.0;
+    double sum_R0_1_n = 0.0;
+    double sum_R0_2_Q = 0.0;
+    double sum_R0_2_n = 0.0;
+    double sum_R1_n = 0.0;
+    double sum_R1_Q = 0.0;
+    double sum_R3_0_0_n = 0.0;
+    double sum_R3_0_0_Q = 0.0;
+    double sum_R3_0_1_n = 0.0;
+    double sum_R3_0_1_Q = 0.0;
+    double sum_R3_0_2_n = 0.0;
+    double sum_R3_0_2_Q = 0.0;
+    double sum_R3_1_1_n = 0.0;
+    double sum_R3_1_1_Q = 0.0;
+    double sum_R3_1_2_n = 0.0;
+    double sum_R3_1_2_Q = 0.0;
+    double sum_R3_2_2_n = 0.0;
+    double sum_R3_2_2_Q = 0.0;
+
+    for (i = -count; i < (int)(count); i++)
+    {
+        for (j = -count; j < (int)(count); j++)
+        {
+            for (k = -count; k < (int)(count); k++)
+            {
+                n[0] = i * 1.0;
+                n[1] = j * 1.0;
+                n[2] = k * 1.0;
+                Q[0] = i * d / rectScaleX;
+                Q[1] = j * d / rectScaleY;
+                Q[2] = k * d / rectScaleZ;
+
+                norm_n = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+                norm_Q = Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2];
+
+                if (norm_n == .0 || norm_Q == .0)
+                {
+                    continue;
+                }
+
+                factor_n = exp(-alpha * (norm_n * norm_n));
+                factor_Q = exp(-alpha * (norm_Q * norm_Q));
+
+                sum_R0_0_Q += Q[0] * Q[0] / norm_Q * factor_Q;
+                sum_R0_0_n += n[0] * n[0] / norm_n * factor_n;
+
+                sum_R0_1_Q += Q[1] * Q[1] / norm_Q * factor_Q;
+                sum_R0_1_n += n[1] * n[1] / norm_n * factor_n;
+
+                sum_R0_2_Q += Q[2] * Q[2] / norm_Q * factor_Q;
+                sum_R0_2_n += n[2] * n[2] / norm_n * factor_n;
+
+                sum_R1_n += factor_n / norm_n;
+                sum_R1_Q += factor_Q / norm_Q;
+
+                sum_R3_0_0_n += n[0] * n[0] * n[0] * n[0] / pow(norm_n, 3) * factor_n;
+                sum_R3_0_0_Q += Q[0] * Q[0] * Q[0] * Q[0] / pow(norm_Q, 3) * factor_Q;
+                sum_R3_0_1_n += n[0] * n[0] * n[1] * n[1] / pow(norm_n, 3) * factor_n;
+                sum_R3_0_1_Q += Q[0] * Q[0] * Q[1] * Q[1] / pow(norm_Q, 3) * factor_Q;
+                sum_R3_0_2_n += n[0] * n[0] * n[2] * n[2] / pow(norm_n, 3) * factor_n;
+                sum_R3_0_2_Q += Q[0] * Q[0] * Q[2] * Q[2] / pow(norm_Q, 3) * factor_Q;
+                sum_R3_1_1_n += n[1] * n[1] * n[1] * n[1] / pow(norm_n, 3) * factor_n;
+                sum_R3_1_1_Q += Q[1] * Q[1] * Q[1] * Q[1] / pow(norm_Q, 3) * factor_Q;
+                sum_R3_1_2_n += n[1] * n[1] * n[2] * n[2] / pow(norm_n, 3) * factor_n;
+                sum_R3_1_2_Q += Q[1] * Q[1] * Q[2] * Q[2] / pow(norm_Q, 3) * factor_Q;
+                sum_R3_2_2_n += n[2] * n[2] * n[2] * n[2] / pow(norm_n, 3) * factor_n;
+                sum_R3_2_2_Q += Q[2] * Q[2] * Q[2] * Q[2] / pow(norm_Q, 3) * factor_Q;
+            }
+        }
+    }
+
+    draine_data.R0[0] = sum_R0_0_n - sum_R0_0_Q;
+    draine_data.R0[1] = sum_R0_1_n - sum_R0_1_Q;
+    draine_data.R0[2] = sum_R0_2_n - sum_R0_2_Q;
+
+    draine_data.R1 = sum_R1_n - sum_R1_Q;
+
+    draine_data.R3[0] = sum_R3_0_0_n - sum_R3_0_0_Q;
+    draine_data.R3[1] = sum_R3_1_1_n - sum_R3_1_1_Q;
+    draine_data.R3[2] = sum_R3_2_2_n - sum_R3_2_2_Q;
+    draine_data.R3[3] = sum_R3_0_1_n - sum_R3_0_1_Q;
+    draine_data.R3[4] = sum_R3_0_2_n - sum_R3_0_2_Q;
+    draine_data.R3[5] = sum_R3_1_2_n - sum_R3_1_2_Q;
+
+    draine_data.R2[0] = draine_data.R3[0] + draine_data.R3[3] + draine_data.R3[4];
+    draine_data.R2[1] = draine_data.R3[1] + draine_data.R3[3] + draine_data.R3[5];
+    draine_data.R2[2] = draine_data.R3[4] + draine_data.R3[5] + draine_data.R3[2];
+}
+
+//struct draine_coefficients draine_precalc_data_array = R_coeff_rect_lattice();
 
 // CalculateE.c
 int CalculateE(enum incpol which,enum Eftype type);
@@ -409,7 +316,6 @@ static void CoupleConstant(doublecomplex *mrel,const enum incpol which,doublecom
 		double a,b,c;
 		double omega;
 		double beta;
-		int draine_precalc_data_index=UNDEF;
 #define IS_DOUBLE_EQUAL(x,y) ( fabs((x) - (y)) < ROUND_ERR )
 		if (PolRelation==POL_CLDR || PolRelation==POL_CM) {
 			double temp_rectScaleX=rectScaleX,
@@ -423,22 +329,9 @@ static void CoupleConstant(doublecomplex *mrel,const enum incpol which,doublecom
 				temp_rectScaleZ/=tmp;
 			}
 
-			i=-1;
-			while (draine_precalc_data_array[++i].ratios[0] > 0
-				   || draine_precalc_data_array[i].ratios[1] > 0
-				   || draine_precalc_data_array[i].ratios[2] > 0) {
-				if (IS_DOUBLE_EQUAL(temp_rectScaleX,draine_precalc_data_array[i].ratios[0]) &&
-					IS_DOUBLE_EQUAL(temp_rectScaleY,draine_precalc_data_array[i].ratios[1]) &&
-					IS_DOUBLE_EQUAL(temp_rectScaleZ,draine_precalc_data_array[i].ratios[2])) {
-					draine_precalc_data_index=i;
-					break;
-				}
-			}
-			if (draine_precalc_data_index==UNDEF) LogError(ONE_POS,"Non-standard proportions of rectangular dipole "
-				"(%g:%g:%g) are not compatible with CM, LDR, and CLDR polarizabilities. See the manual for details.",
-				rectScaleX,rectScaleY,rectScaleZ);
 #undef IS_DOUBLE_EQUAL
 		}
+		R_coeff_rect_lattice();
 		double c1=-5.9424219;
 		double c2=0.5178819;
 		double c3=4.0069747;
@@ -479,23 +372,23 @@ static void CoupleConstant(doublecomplex *mrel,const enum incpol which,doublecom
 				// Eq number noted for some lines of code
 				res[i]=3*(mrel[0]*mrel[0]-1)/(mrel[0]*mrel[0]+2); // CM
 				// Eq.(55), corrected value CM for rectangular dipole
-				res[i]=res[i]/(1+res[i]*draine_precalc_data_array[draine_precalc_data_index].R0[i]);
+				res[i]=res[i]/(1+res[i]*draine_data.R0[i]);
 				res[i]*=dipvol/FOUR_PI;
 				if (PolRelation==POL_CLDR) {
 					draineSum=0;
 					for (l=0; l < 3; l++)
-						draineSum+=prop[l]*prop[l]*draine_precalc_data_array[draine_precalc_data_index].R3[R3_INDEX(i,l)];
+						draineSum+=prop[l]*prop[l]*draine_data.R3[R3_INDEX(i,l)];
 
 					// L is obtaned in Eq.(62)
 					L=c1+mrel[0]*mrel[0]*c2*(1-3*prop[i]*prop[i])-mrel[0]*mrel[0]*c3*prop[i]*prop[i]-FOUR_PI*PI*I*nu/3-
-					  draine_precalc_data_array[draine_precalc_data_index].R1-
-					  (mrel[0]*mrel[0]-1)*draine_precalc_data_array[draine_precalc_data_index].R2[i]-
+                            draine_data.R1-
+					  (mrel[0]*mrel[0]-1)*draine_data.R2[i]-
 					  8*mrel[0]*mrel[0]*prop[i]*prop[i]*
-					  draine_precalc_data_array[draine_precalc_data_index].R3[R3_INDEX(i,i)]+4*mrel[0]*mrel[0]*draineSum;
+					  draine_data.R3[R3_INDEX(i,i)]+4*mrel[0]*mrel[0]*draineSum;
 					// K is obtaned in Eq.(63)
-					K=c3+draine_precalc_data_array[draine_precalc_data_index].R1-
-					  4*draine_precalc_data_array[draine_precalc_data_index].R2[i]+
-					  8*draine_precalc_data_array[draine_precalc_data_index].R3[R3_INDEX(i,i)];
+					K=c3+draine_data.R1-
+					  4*draine_data.R2[i]+
+					  8*draine_data.R3[R3_INDEX(i,i)];
 
 					correction=-FOUR_PI*nu*nu*(L+mrel[0]*mrel[0]*prop[i]*prop[i]*(K-c3)); // Eq.(65)
 					res[i]=res[i]/(1-(res[i]/dipvol)*correction);
